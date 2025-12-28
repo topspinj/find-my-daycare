@@ -93,6 +93,33 @@
                             </div>
                         </div>
 
+                        {% if daycare.website or daycare.google_rating or daycare.phone %}
+                        <div class="supplementary-info">
+                            {% if daycare.google_rating %}
+                            <span class="rating-chip">
+                                <i class="fa-brands fa-google"></i>
+                                <i class="fa-solid fa-star"></i>
+                                {{ daycare.google_rating }}
+                                {% if daycare.google_reviews_count %}
+                                <span class="review-count">({{ daycare.google_reviews_count }})</span>
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                            {% if daycare.website %}
+                            <a href="{{ daycare.website }}" target="_blank" rel="noopener" class="website-link">
+                                <i class="fa-solid fa-globe"></i>
+                                Website
+                            </a>
+                            {% endif %}
+                            {% if daycare.phone %}
+                            <a href="tel:{{ daycare.phone }}" class="phone-link">
+                                <i class="fa-solid fa-phone"></i>
+                                {{ daycare.phone }}
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
                         <div class="card-footer">
                             <div class="card-badges">
                                 {% if daycare.cwelcc %}
@@ -192,7 +219,10 @@
                 subsidy: {{ 'true' if daycare.subsidy else 'false' }},
                 cwelcc: {{ 'true' if daycare.cwelcc else 'false' }},
                 ageGroupLabel: "{{ daycare.age_group_label | e }}",
-                ageGroupSpaces: {{ daycare.capacity }}
+                ageGroupSpaces: {{ daycare.capacity }},
+                website: {{ ('\"' + daycare.website + '\"') | safe if daycare.website else 'null' }},
+                googleRating: {{ daycare.google_rating if daycare.google_rating else 'null' }},
+                googleReviewsCount: {{ daycare.google_reviews_count if daycare.google_reviews_count else 'null' }}
             }{% if not loop.last %},{% endif %}
             {% endfor %}
         ];
@@ -205,13 +235,29 @@
             if (d.cwelcc) badges += '<span style="background:#e8f4f8;color:#2e7d9a;padding:3px 8px;border-radius:4px;font-size:11px;margin-right:4px;">CWELCC</span>';
             if (d.subsidy) badges += '<span style="background:#e6f4f1;color:#0f7b6c;padding:3px 8px;border-radius:4px;font-size:11px;">Subsidy</span>';
 
+            var ratingHtml = '';
+            if (d.googleRating) {
+                ratingHtml = '<span style="color:#f59e0b;font-size:13px;"><i class="fa-brands fa-google" style="color:#4285f4;margin-right:3px;"></i><i class="fa-solid fa-star"></i> ' + d.googleRating;
+                if (d.googleReviewsCount) {
+                    ratingHtml += ' <span style="color:#6b6b6b;">(' + d.googleReviewsCount + ')</span>';
+                }
+                ratingHtml += '</span><br>';
+            }
+
+            var websiteHtml = '';
+            if (d.website) {
+                websiteHtml = '<a href="' + d.website + '" target="_blank" rel="noopener" style="color:#2563eb;font-size:13px;text-decoration:none;"><i class="fa-solid fa-globe"></i> Website</a><br>';
+            }
+
             var popupContent =
                 '<div style="min-width:200px;font-family:-apple-system,sans-serif;">' +
                 '<strong style="font-size:14px;color:#37352f;">' + d.name + '</strong><br>' +
                 '<span style="color:#6b6b6b;font-size:13px;">' + d.address + '</span><br>' +
                 '<span style="color:#0f7b6c;font-weight:600;font-size:13px;">' + d.distance + ' km away</span><br>' +
-                '<span style="color:#37352f;font-size:13px;">' + d.ageGroupSpaces + ' ' + d.ageGroupLabel + ' spots</span><br><br>' +
-                badges +
+                '<span style="color:#37352f;font-size:13px;">' + d.ageGroupSpaces + ' ' + d.ageGroupLabel + ' spots</span><br>' +
+                ratingHtml +
+                websiteHtml +
+                '<br>' + badges +
                 '</div>';
 
             var icon = d.cwelcc ? cwelccIcon : nonCwelccIcon;
