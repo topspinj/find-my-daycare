@@ -7,17 +7,28 @@
     <div class="search-summary">
         <h2>Daycares near {{ address }}</h2>
         <p>Child's age: {{ age_display }}</p>
-        <p>Found <strong>{{ results|length }}</strong> daycares within {{ radius_km }}km
+        <p>Found <strong id="results-count">{{ results|length }}</strong> daycares within {{ radius_km }}km
            {% if results %}with {{ results[0].age_group_label }} capacity{% endif %}</p>
         <a href="/" class="back-link">New Search</a>
     </div>
 
     {% if results %}
-    <div id="map"></div>
+    <div class="stats-summary">
+        <button class="stat-card" id="filter-walking" type="button">
+            <span class="stat-value">{{ stats.walking_distance }}</span>
+            <span class="stat-label">Walking distance</span>
+        </button>
+        <button class="stat-card" id="filter-cwelcc" type="button">
+            <span class="stat-value">{{ stats.cwelcc_count }}</span>
+            <span class="stat-label">CWELCC</span>
+        </button>
+    </div>
 
-    <ul class="daycare-list">
+    <div class="results-layout">
+        <div class="sidebar">
+            <ul class="daycare-list">
         {% for daycare in results %}
-        <li class="daycare-card" data-lat="{{ daycare.lat }}" data-lon="{{ daycare.lon }}">
+        <li class="daycare-card" data-lat="{{ daycare.lat }}" data-lon="{{ daycare.lon }}" data-cwelcc="{{ 'true' if daycare.cwelcc else 'false' }}" data-walktime="{{ daycare.walk_time }}">
             <h3>{{ daycare.name }}</h3>
             <p class="distance">{{ daycare.distance_km }} km</p>
             <p class="travel-times">
@@ -27,8 +38,24 @@
             </p>
             <p class="address">{{ daycare.address }}, {{ daycare.postal_code }}</p>
             <p class="phone">Phone: {{ daycare.phone }}</p>
+            <div class="age-spaces">
+                <span class="age-row {% if 'Infant' in daycare.age_group_label %}highlighted{% endif %}">
+                    Infant: {{ daycare.infant_spaces }}
+                </span>
+                <span class="age-row {% if 'Toddler' in daycare.age_group_label %}highlighted{% endif %}">
+                    Toddler: {{ daycare.toddler_spaces }}
+                </span>
+                <span class="age-row {% if 'Preschool' in daycare.age_group_label %}highlighted{% endif %}">
+                    Preschool: {{ daycare.preschool_spaces }}
+                </span>
+                <span class="age-row {% if 'Kindergarten' in daycare.age_group_label %}highlighted{% endif %}">
+                    Kindergarten: {{ daycare.kindergarten_spaces }}
+                </span>
+                <span class="age-row {% if 'School Age' in daycare.age_group_label %}highlighted{% endif %}">
+                    School Age: {{ daycare.schoolage_spaces }}
+                </span>
+            </div>
             <div class="details">
-                <span class="capacity">{{ daycare.capacity }} spaces ({{ daycare.age_group_label }})</span>
                 <span class="total">Total: {{ daycare.total_spaces }} spaces</span>
                 {% if daycare.subsidy %}
                 <span class="badge subsidy">Subsidy Available</span>
@@ -39,7 +66,12 @@
             </div>
         </li>
         {% endfor %}
-    </ul>
+            </ul>
+        </div>
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
 
     <script>
         var map = L.map('map').setView([{{ user_lat }}, {{ user_lon }}], 14);
@@ -48,12 +80,13 @@
             attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
         }).addTo(map);
 
-        // User location marker (blue)
+        // User location marker (red pin emoji)
         var userIcon = L.divIcon({
             className: 'user-marker',
-            html: '<div style="background:#2c5282;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+            html: '<span style="font-size:32px;">📍</span>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
         });
         L.marker([{{ user_lat }}, {{ user_lon }}], {icon: userIcon})
             .addTo(map)
@@ -91,7 +124,9 @@
             {% endfor %}
         ];
 
-        daycares.forEach(function(d) {
+        var markers = [];
+
+        daycares.forEach(function(d, index) {
             var badges = '';
             if (d.subsidy) badges += '<span style="background:#c6f6d5;color:#276749;padding:2px 6px;border-radius:3px;font-size:11px;margin-right:4px;">Subsidy</span>';
             if (d.cwelcc) badges += '<span style="background:#bee3f8;color:#2b6cb0;padding:2px 6px;border-radius:3px;font-size:11px;">CWELCC</span>';
@@ -111,9 +146,80 @@
                 badges +
                 '</div>';
 
-            L.marker([d.lat, d.lon], {icon: babyIcon})
+            var marker = L.marker([d.lat, d.lon], {icon: babyIcon})
                 .addTo(map)
                 .bindPopup(popupContent);
+
+            markers.push({
+                marker: marker,
+                cwelcc: d.cwelcc,
+                index: index
+            });
+        });
+
+        // Filter functionality
+        var cards = document.querySelectorAll('.daycare-card');
+        var walkingFilter = document.getElementById('filter-walking');
+        var cwelccFilter = document.getElementById('filter-cwelcc');
+        var resultsCount = document.getElementById('results-count');
+
+        var filterWalkingActive = false;
+        var filterCwelccActive = false;
+
+        function parseWalkTime(walkTimeStr) {
+            if (!walkTimeStr || walkTimeStr === 'N/A') return null;
+            var totalMinutes = 0;
+            if (walkTimeStr.includes('hour')) {
+                var parts = walkTimeStr.split('hour');
+                totalMinutes += parseInt(parts[0].trim()) * 60;
+                walkTimeStr = parts[1] || '';
+            }
+            if (walkTimeStr.includes('min')) {
+                var minPart = walkTimeStr.split('min')[0].trim();
+                var nums = minPart.split(' ');
+                totalMinutes += parseInt(nums[nums.length - 1]) || 0;
+            }
+            return totalMinutes > 0 ? totalMinutes : null;
+        }
+
+        function applyFilters() {
+            var visibleCount = 0;
+
+            cards.forEach(function(card, index) {
+                var isCwelcc = card.dataset.cwelcc === 'true';
+                var walkTime = parseWalkTime(card.dataset.walktime);
+                var isWalkable = walkTime !== null && walkTime <= 15;
+
+                var show = true;
+                if (filterWalkingActive && !isWalkable) show = false;
+                if (filterCwelccActive && !isCwelcc) show = false;
+
+                card.style.display = show ? '' : 'none';
+
+                // Show/hide corresponding marker
+                if (markers[index]) {
+                    if (show) {
+                        markers[index].marker.addTo(map);
+                        visibleCount++;
+                    } else {
+                        map.removeLayer(markers[index].marker);
+                    }
+                }
+            });
+
+            resultsCount.textContent = visibleCount;
+        }
+
+        walkingFilter.addEventListener('click', function() {
+            filterWalkingActive = !filterWalkingActive;
+            this.classList.toggle('active', filterWalkingActive);
+            applyFilters();
+        });
+
+        cwelccFilter.addEventListener('click', function() {
+            filterCwelccActive = !filterCwelccActive;
+            this.classList.toggle('active', filterCwelccActive);
+            applyFilters();
         });
     </script>
     {% else %}

@@ -96,6 +96,63 @@ def find_nearby_daycares(
     return results
 
 
+def parse_walk_time(walk_time_str: str) -> Optional[int]:
+    """Parse walk time string like '15 mins' or '1 hour 5 mins' to minutes."""
+    if not walk_time_str or walk_time_str == "N/A":
+        return None
+    try:
+        total_minutes = 0
+        # Handle hours
+        if "hour" in walk_time_str:
+            parts = walk_time_str.split("hour")
+            hours = int(parts[0].strip())
+            total_minutes += hours * 60
+            walk_time_str = parts[1] if len(parts) > 1 else ""
+        # Handle minutes
+        if "min" in walk_time_str:
+            min_part = walk_time_str.split("min")[0].strip()
+            # Get just the number (last word before "min")
+            min_num = min_part.split()[-1] if min_part else "0"
+            total_minutes += int(min_num)
+        return total_minutes if total_minutes > 0 else None
+    except (ValueError, AttributeError, IndexError):
+        return None
+
+
+def calculate_stats(results: List[dict]) -> dict:
+    """Calculate summary statistics for search results."""
+    if not results:
+        return {}
+
+    total = len(results)
+
+    # Walking distance (15 min or less)
+    walking_distance = 0
+    for r in results:
+        minutes = parse_walk_time(r.get("walk_time"))
+        if minutes is not None and minutes <= 15:
+            walking_distance += 1
+
+    # CWELCC count
+    cwelcc_count = sum(1 for r in results if r.get("cwelcc"))
+
+    # Subsidy count
+    subsidy_count = sum(1 for r in results if r.get("subsidy"))
+
+    # Total spaces for the age group
+    total_spaces = sum(r.get("capacity", 0) for r in results)
+
+    return {
+        "total": total,
+        "walking_distance": walking_distance,
+        "cwelcc_count": cwelcc_count,
+        "cwelcc_percent": round(cwelcc_count / total * 100) if total > 0 else 0,
+        "subsidy_count": subsidy_count,
+        "subsidy_percent": round(subsidy_count / total * 100) if total > 0 else 0,
+        "total_spaces": total_spaces,
+    }
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     """Main search page."""
@@ -146,6 +203,9 @@ def index():
                     result["walk_time"] = travel_times[i]["walk"]
                     result["transit_time"] = travel_times[i]["transit"]
                     result["drive_time"] = travel_times[i]["drive"]
+
+            # Calculate summary stats
+            stats = calculate_stats(results)
         except Exception as e:
             errors.append(f"Error searching daycares: {str(e)}")
             return render_template(
@@ -166,6 +226,7 @@ def index():
             radius_km=SEARCH_RADIUS_KM,
             user_lat=user_lat,
             user_lon=user_lon,
+            stats=stats,
         )
 
     return render_template("index.html")
