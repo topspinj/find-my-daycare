@@ -15,7 +15,7 @@
                 <div class="search-context">
                     <strong id="results-count">{{ results|length }}</strong> daycares within 5 km of <strong>{{ address }}</strong>
                     <span>&middot;</span>
-                    {{ age_display }} ({{ results[0].age_group_label if results else 'N/A' }})
+                    {{ age_display }} on {{ start_date_display }} ({{ results[0].age_group_label if results else 'N/A' }})
                 </div>
             </div>
 
