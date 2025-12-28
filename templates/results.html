@@ -134,19 +134,19 @@
             .addTo(map)
             .bindPopup('<strong>Your location</strong><br>{{ address }}');
 
-        // CWELCC marker (teal)
+        // CWELCC marker (blue)
         var cwelccIcon = L.divIcon({
             className: 'cwelcc-marker',
-            html: '<div style="background:#0f7b6c;width:28px;height:28px;border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-baby" style="color:white;font-size:12px;"></i></div>',
+            html: '<div style="background:#2563eb;width:28px;height:28px;border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-baby" style="color:white;font-size:12px;"></i></div>',
             iconSize: [28, 28],
             iconAnchor: [14, 14],
             popupAnchor: [0, -14]
         });
 
-        // Non-CWELCC marker (purple)
+        // Non-CWELCC marker (orange)
         var nonCwelccIcon = L.divIcon({
             className: 'non-cwelcc-marker',
-            html: '<div style="background:#6b5b95;width:28px;height:28px;border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-baby" style="color:white;font-size:12px;"></i></div>',
+            html: '<div style="background:#f97316;width:28px;height:28px;border-radius:50%;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-baby" style="color:white;font-size:12px;"></i></div>',
             iconSize: [28, 28],
             iconAnchor: [14, 14],
             popupAnchor: [0, -14]
@@ -159,11 +159,11 @@
             div.innerHTML = `
                 <div style="background:white;padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-size:12px;font-family:-apple-system,sans-serif;">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                        <div style="background:#0f7b6c;width:12px;height:12px;border-radius:50%;"></div>
+                        <div style="background:#2563eb;width:12px;height:12px;border-radius:50%;"></div>
                         <span style="color:#37352f;">CWELCC</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <div style="background:#6b5b95;width:12px;height:12px;border-radius:50%;"></div>
+                        <div style="background:#f97316;width:12px;height:12px;border-radius:50%;"></div>
                         <span style="color:#37352f;">Non-CWELCC</span>
                     </div>
                 </div>
