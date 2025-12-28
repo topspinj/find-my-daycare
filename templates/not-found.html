@@ -3,11 +3,14 @@
 {% block title %}Address Not Found - Find My Daycare{% endblock %}
 
 {% block content %}
-<div class="not-found-page">
-    <div class="not-found-emoji">👶❌</div>
-    <h2>Sorry, no babies to be found here!</h2>
-    <p>We couldn't find that address, or it might be outside of Toronto.</p>
+<div class="not-found-container">
+    <div class="not-found-emoji">👶</div>
+    <h2>We couldn't find that address</h2>
+    <p>The address might be outside Toronto, or we couldn't locate it.</p>
     <p class="not-found-hint">Try entering a more specific Toronto address.</p>
-    <a href="/" class="back-button">← Try Again</a>
+    <a href="/" class="btn-secondary">
+        <span>&larr;</span>
+        <span>Try again</span>
+    </a>
 </div>
 {% endblock %}
