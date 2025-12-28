@@ -18,18 +18,37 @@ app = Flask(__name__)
 
 SEARCH_RADIUS_KM = 5.0
 DATA_DIR = "data"
+SUPPLEMENTARY_FILE = os.path.join(DATA_DIR, "daycare_supplementary.csv")
+
+
+def load_supplementary_data() -> pd.DataFrame:
+    """Load supplementary daycare data if it exists."""
+    if os.path.exists(SUPPLEMENTARY_FILE):
+        return pd.read_csv(SUPPLEMENTARY_FILE)
+    return pd.DataFrame()
 
 
 def load_daycare_data() -> pd.DataFrame:
-    """Load the most recent daycare CSV file."""
-    csv_files = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
+    """Load the most recent daycare CSV file and merge with supplementary data."""
+    # Filter to only daycare_list_*.csv files (exclude supplementary)
+    csv_files = [
+        f for f in os.listdir(DATA_DIR)
+        if f.startswith("daycare_list_") and f.endswith(".csv")
+    ]
     if not csv_files:
         raise FileNotFoundError("No daycare data file found")
 
     csv_files.sort(reverse=True)
     latest_file = os.path.join(DATA_DIR, csv_files[0])
 
-    return pd.read_csv(latest_file)
+    df = pd.read_csv(latest_file)
+
+    # Merge with supplementary data if available
+    supplementary = load_supplementary_data()
+    if not supplementary.empty:
+        df = df.merge(supplementary, on="LOC_ID", how="left")
+
+    return df
 
 
 def parse_geometry(geometry_str: str) -> Optional[Tuple[float, float]]:
@@ -88,6 +107,11 @@ def find_nearby_daycares(
                 "preschool_spaces": int(row["PGSPACE"]) if not pd.isna(row["PGSPACE"]) else 0,
                 "kindergarten_spaces": int(row["KGSPACE"]) if not pd.isna(row["KGSPACE"]) else 0,
                 "schoolage_spaces": int(row["SGSPACE"]) if not pd.isna(row["SGSPACE"]) else 0,
+                # Supplementary data (may be None)
+                "website": row.get("website") if pd.notna(row.get("website")) else None,
+                "google_rating": row.get("google_rating") if pd.notna(row.get("google_rating")) else None,
+                "google_reviews_count": int(row.get("google_reviews_count")) if pd.notna(row.get("google_reviews_count")) else None,
+                "google_maps_url": row.get("google_maps_url") if pd.notna(row.get("google_maps_url")) else None,
             }
         )
 
@@ -190,14 +214,14 @@ def index():
             df = load_daycare_data()
             results = find_nearby_daycares(user_lat, user_lon, birthday, df)
 
-            # Get travel times for all results
+            # Get travel times for closest 20 results only (to limit API calls)
             if results:
-                destinations = [(r["lat"], r["lon"]) for r in results]
+                travel_limit = min(20, len(results))
+                destinations = [(r["lat"], r["lon"]) for r in results[:travel_limit]]
                 travel_times = get_all_travel_times((user_lat, user_lon), destinations)
-                for i, result in enumerate(results):
-                    result["walk_time"] = travel_times[i]["walk"]
-                    result["transit_time"] = travel_times[i]["transit"]
-                    result["drive_time"] = travel_times[i]["drive"]
+                for i in range(travel_limit):
+                    results[i]["walk_time"] = travel_times[i]["walk"]
+                    results[i]["drive_time"] = travel_times[i]["drive"]
 
             # Calculate summary stats
             stats = calculate_stats(results)

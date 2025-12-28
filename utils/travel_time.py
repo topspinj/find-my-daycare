@@ -52,10 +52,10 @@ def get_all_travel_times(
     origin: Tuple[float, float], destinations: List[Tuple[float, float]]
 ) -> List[Dict]:
     """
-    Get walking, transit, and driving times from origin to destinations.
+    Get walking and driving times from origin to destinations.
 
     Returns:
-        List of dicts with 'walk', 'transit', and 'drive' keys
+        List of dicts with 'walk' and 'drive' keys
     """
     if not destinations:
         return []
@@ -63,7 +63,6 @@ def get_all_travel_times(
     client = get_maps_client()
 
     walk_times = get_travel_times_for_mode(client, origin, destinations, "walking")
-    transit_times = get_travel_times_for_mode(client, origin, destinations, "transit")
     drive_times = get_travel_times_for_mode(client, origin, destinations, "driving")
 
     results = []
@@ -71,7 +70,6 @@ def get_all_travel_times(
         results.append(
             {
                 "walk": walk_times[i],
-                "transit": transit_times[i],
                 "drive": drive_times[i],
             }
         )

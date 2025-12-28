@@ -471,6 +471,75 @@ h1, h2, h3, h4 {
     color: var(--text-tertiary);
 }
 
+/* Supplementary info (rating & website) */
+.supplementary-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+    flex-wrap: wrap;
+}
+
+.rating-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent-orange);
+}
+
+.rating-chip i {
+    font-size: 11px;
+}
+
+.rating-chip .fa-google {
+    color: #4285f4;
+}
+
+.rating-chip .review-count {
+    color: var(--text-tertiary);
+    font-weight: 400;
+}
+
+.website-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent-blue);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.website-link:hover {
+    color: #1d5f7a;
+    text-decoration: underline;
+}
+
+.website-link i {
+    font-size: 11px;
+}
+
+.phone-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.phone-link:hover {
+    color: var(--text-primary);
+}
+
+.phone-link i {
+    font-size: 11px;
+}
+
 /* Map container */
 .map-container {
     border-radius: var(--radius-lg);

@@ -33,9 +33,43 @@ def geocode_address(address: str) -> Optional[Tuple[float, float]]:
         client = get_maps_client()
         results = client.geocode(address)
 
-        if results:
-            location = results[0]["geometry"]["location"]
-            return (location["lat"], location["lng"])
-        return None
+        if not results:
+            return None
+
+        result = results[0]
+        geometry = result.get("geometry", {})
+        location = geometry.get("location")
+
+        if not location:
+            return None
+
+        # Reject vague matches - only accept precise addresses
+        # ROOFTOP = exact address, RANGE_INTERPOLATED = interpolated street number
+        location_type = geometry.get("location_type", "")
+        if location_type not in ("ROOFTOP", "RANGE_INTERPOLATED"):
+            return None
+
+        # Check that result is in Toronto area
+        address_components = result.get("address_components", [])
+        is_toronto = False
+        has_street = False
+
+        for component in address_components:
+            types = component.get("types", [])
+            name = component.get("long_name", "").lower()
+
+            # Check for Toronto
+            if "locality" in types and "toronto" in name:
+                is_toronto = True
+
+            # Check for street-level address
+            if "street_number" in types or "route" in types:
+                has_street = True
+
+        # Must be in Toronto and have a street address
+        if not is_toronto or not has_street:
+            return None
+
+        return (location["lat"], location["lng"])
     except Exception:
         return None
