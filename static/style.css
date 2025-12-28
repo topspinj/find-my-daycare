@@ -11,6 +11,7 @@ body {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
+    background: #fff;
 }
 
 header {
@@ -124,6 +125,26 @@ button:hover {
     color: #dd6b20;
 }
 
+.age-spaces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 10px;
+    padding: 10px;
+    background: #f7fafc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.age-row {
+    color: #718096;
+}
+
+.age-row.highlighted {
+    font-weight: 700;
+    color: #2c5282;
+}
+
 .details {
     margin-top: 10px;
 }
@@ -153,12 +174,120 @@ button:hover {
     text-align: center;
 }
 
+/* Stats summary */
+.stats-summary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: #f7fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.stat-card:hover {
+    border-color: #2c5282;
+    background: #edf2f7;
+}
+
+.stat-card.active {
+    background: #2c5282;
+    border-color: #2c5282;
+}
+
+.stat-card.active .stat-value,
+.stat-card.active .stat-label {
+    color: white;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2c5282;
+}
+
+.stat-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Results layout - sidebar + map */
+.results-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.sidebar {
+    order: 2;
+}
+
+.sidebar .daycare-list {
+    max-height: none;
+}
+
+.map-container {
+    order: 1;
+}
+
 #map {
     height: 400px;
     width: 100%;
     border-radius: 8px;
-    margin-bottom: 20px;
     border: 1px solid #e2e8f0;
+}
+
+/* Desktop sidebar layout */
+@media (min-width: 900px) {
+    body:has(.results-layout) {
+        max-width: 100%;
+        padding: 20px 40px;
+    }
+
+    .results-layout {
+        flex-direction: row;
+        height: calc(100vh - 250px);
+        min-height: 500px;
+    }
+
+    .sidebar {
+        order: 1;
+        width: 400px;
+        flex-shrink: 0;
+        overflow-y: auto;
+    }
+
+    .sidebar .daycare-list {
+        max-height: none;
+    }
+
+    .sidebar .daycare-card {
+        margin-bottom: 10px;
+    }
+
+    .map-container {
+        order: 2;
+        flex: 1;
+        position: sticky;
+        top: 20px;
+    }
+
+    #map {
+        height: 100%;
+        min-height: 500px;
+    }
 }
 
 /* Flatpickr customization */
