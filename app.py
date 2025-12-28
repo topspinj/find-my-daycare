@@ -64,10 +64,12 @@ def parse_geometry(geometry_str: str) -> Optional[Tuple[float, float]]:
 
 
 def find_nearby_daycares(
-    user_lat: float, user_lon: float, birthday: datetime, df: pd.DataFrame
+    user_lat: float, user_lon: float, birthday: datetime, df: pd.DataFrame,
+    start_date: datetime = None
 ) -> List[dict]:
     """Find daycares within radius that have capacity for the child's age group."""
-    age_group = get_age_group(birthday.date())
+    reference_date = start_date.date() if start_date else None
+    age_group = get_age_group(birthday.date(), reference_date)
     capacity_column = age_group["column"]
 
     results = []
@@ -183,6 +185,7 @@ def index():
     if request.method == "POST":
         address = request.form.get("address", "").strip()
         birthday_str = request.form.get("birthday", "").strip()
+        start_date_str = request.form.get("start_date", "").strip()
 
         errors = []
 
@@ -197,11 +200,27 @@ def index():
             try:
                 birthday = datetime.strptime(birthday_str, "%Y-%m-%d")
             except ValueError:
-                errors.append("Invalid date format")
+                errors.append("Invalid birthday format")
+
+        # Default start date to today if not provided
+        start_date = None
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            except ValueError:
+                errors.append("Invalid start date format")
+        else:
+            start_date = datetime.now()
+            start_date_str = start_date.strftime("%Y-%m-%d")
+
+        # Validate birthday is not after start date
+        if birthday and start_date and birthday > start_date:
+            errors.append("Birthday cannot be after the start date")
 
         if errors:
             return render_template(
-                "index.html", errors=errors, address=address, birthday=birthday_str
+                "index.html", errors=errors, address=address, birthday=birthday_str,
+                start_date=start_date_str
             )
 
         coords = geocode_address(address)
@@ -212,7 +231,7 @@ def index():
 
         try:
             df = load_daycare_data()
-            results = find_nearby_daycares(user_lat, user_lon, birthday, df)
+            results = find_nearby_daycares(user_lat, user_lon, birthday, df, start_date)
 
             # Get travel times for closest 20 results only (to limit API calls)
             if results:
@@ -228,20 +247,25 @@ def index():
         except Exception as e:
             errors.append(f"Error searching daycares: {str(e)}")
             return render_template(
-                "index.html", errors=errors, address=address, birthday=birthday_str
+                "index.html", errors=errors, address=address, birthday=birthday_str,
+                start_date=start_date_str
             )
 
-        age_months = calculate_age_in_months(birthday.date())
+        age_months = calculate_age_in_months(birthday.date(), start_date.date())
         if age_months >= 12:
             age_display = f"{age_months // 12} years, {age_months % 12} months"
         else:
             age_display = f"{age_months} months"
+
+        # Format start date for display
+        start_date_display = start_date.strftime("%B %d, %Y")
 
         return render_template(
             "results.html",
             results=results,
             address=address,
             age_display=age_display,
+            start_date_display=start_date_display,
             radius_km=SEARCH_RADIUS_KM,
             user_lat=user_lat,
             user_lon=user_lon,

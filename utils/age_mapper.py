@@ -36,24 +36,26 @@ AGE_GROUPS = {
 }
 
 
-def calculate_age_in_months(birthday: date) -> int:
-    """Calculate age in months from birthday to today."""
-    today = date.today()
-    diff = relativedelta(today, birthday)
+def calculate_age_in_months(birthday: date, reference_date: date = None) -> int:
+    """Calculate age in months from birthday to reference date (defaults to today)."""
+    if reference_date is None:
+        reference_date = date.today()
+    diff = relativedelta(reference_date, birthday)
     return diff.years * 12 + diff.months
 
 
-def get_age_group(birthday: date) -> dict:
+def get_age_group(birthday: date, reference_date: date = None) -> dict:
     """
     Determine which daycare age group a child belongs to.
 
     Args:
         birthday: Child's date of birth
+        reference_date: Date to calculate age at (defaults to today)
 
     Returns:
         Dictionary with column name, label, and age range info
     """
-    age_months = calculate_age_in_months(birthday)
+    age_months = calculate_age_in_months(birthday, reference_date)
 
     for group_info in AGE_GROUPS.values():
         min_m = group_info["min_months"]
