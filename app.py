@@ -190,14 +190,14 @@ def index():
             df = load_daycare_data()
             results = find_nearby_daycares(user_lat, user_lon, birthday, df)
 
-            # Get travel times for all results
+            # Get travel times for closest 20 results only (to limit API calls)
             if results:
-                destinations = [(r["lat"], r["lon"]) for r in results]
+                travel_limit = min(20, len(results))
+                destinations = [(r["lat"], r["lon"]) for r in results[:travel_limit]]
                 travel_times = get_all_travel_times((user_lat, user_lon), destinations)
-                for i, result in enumerate(results):
-                    result["walk_time"] = travel_times[i]["walk"]
-                    result["transit_time"] = travel_times[i]["transit"]
-                    result["drive_time"] = travel_times[i]["drive"]
+                for i in range(travel_limit):
+                    results[i]["walk_time"] = travel_times[i]["walk"]
+                    results[i]["drive_time"] = travel_times[i]["drive"]
 
             # Calculate summary stats
             stats = calculate_stats(results)
