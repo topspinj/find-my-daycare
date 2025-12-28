@@ -182,12 +182,7 @@ def index():
 
         coords = geocode_address(address)
         if coords is None:
-            errors.append(
-                "Could not find that address. Please try a more specific address."
-            )
-            return render_template(
-                "index.html", errors=errors, address=address, birthday=birthday_str
-            )
+            return render_template("not-found.html")
 
         user_lat, user_lon = coords
 

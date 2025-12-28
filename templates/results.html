@@ -4,12 +4,14 @@
 
 {% block content %}
 <div class="results">
-    <div class="search-summary">
-        <h2>Daycares near {{ address }}</h2>
-        <p>Child's age: {{ age_display }}</p>
-        <p>Found <strong id="results-count">{{ results|length }}</strong> daycares within {{ radius_km }}km
-           {% if results %}with {{ results[0].age_group_label }} capacity{% endif %}</p>
-        <a href="/" class="back-link">New Search</a>
+    <div class="search-summary-compact">
+        <div class="summary-left">
+            <a href="/" class="back-link">&larr; Back</a>
+            <span class="summary-divider">|</span>
+            <span><strong id="results-count">{{ results|length }}</strong> daycares near <strong>{{ address }}</strong></span>
+            <span class="summary-divider">|</span>
+            <span>{{ age_display }}{% if results %} ({{ results[0].age_group_label }}){% endif %}</span>
+        </div>
     </div>
 
     {% if results %}

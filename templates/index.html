@@ -34,8 +34,12 @@
 </div>
 
 <script>
+var fiveYearsAgo = new Date();
+fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+
 flatpickr("#birthday", {
     dateFormat: "Y-m-d",
+    minDate: fiveYearsAgo,
     maxDate: "today",
     defaultDate: "{{ birthday or '' }}"
 });
