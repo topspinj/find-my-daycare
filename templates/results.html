@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - Find My Daycare{% endblock %}
+
+{% block content %}
+<div class="results">
+    <div class="search-summary">
+        <h2>Daycares near {{ address }}</h2>
+        <p>Child's age: {{ age_display }}</p>
+        <p>Found <strong>{{ results|length }}</strong> daycares within {{ radius_km }}km
+           {% if results %}with {{ results[0].age_group_label }} capacity{% endif %}</p>
+        <a href="/" class="back-link">New Search</a>
+    </div>
+
+    {% if results %}
+    <div id="map"></div>
+
+    <ul class="daycare-list">
+        {% for daycare in results %}
+        <li class="daycare-card" data-lat="{{ daycare.lat }}" data-lon="{{ daycare.lon }}">
+            <h3>{{ daycare.name }}</h3>
+            <p class="distance">{{ daycare.distance_km }} km</p>
+            <p class="travel-times">
+                <span class="walk-time"><i class="fa-solid fa-person-walking"></i> {{ daycare.walk_time }}</span>
+                <span class="transit-time"><i class="fa-solid fa-bus"></i> {{ daycare.transit_time }}</span>
+                <span class="drive-time"><i class="fa-solid fa-car"></i> {{ daycare.drive_time }}</span>
+            </p>
+            <p class="address">{{ daycare.address }}, {{ daycare.postal_code }}</p>
+            <p class="phone">Phone: {{ daycare.phone }}</p>
+            <div class="details">
+                <span class="capacity">{{ daycare.capacity }} spaces ({{ daycare.age_group_label }})</span>
+                <span class="total">Total: {{ daycare.total_spaces }} spaces</span>
+                {% if daycare.subsidy %}
+                <span class="badge subsidy">Subsidy Available</span>
+                {% endif %}
+                {% if daycare.cwelcc %}
+                <span class="badge cwelcc">CWELCC</span>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <script>
+        var map = L.map('map').setView([{{ user_lat }}, {{ user_lon }}], 14);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+        }).addTo(map);
+
+        // User location marker (blue)
+        var userIcon = L.divIcon({
+            className: 'user-marker',
+            html: '<div style="background:#2c5282;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+        L.marker([{{ user_lat }}, {{ user_lon }}], {icon: userIcon})
+            .addTo(map)
+            .bindPopup('<strong>Your location</strong><br>{{ address }}');
+
+        // Baby icon for daycare markers (blue)
+        var babyIcon = L.divIcon({
+            className: 'baby-marker',
+            html: '<div style="background:#3182ce;width:32px;height:32px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-baby" style="color:white;font-size:14px;"></i></div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16]
+        });
+
+        // Daycare markers
+        var daycares = [
+            {% for daycare in results %}
+            {
+                lat: {{ daycare.lat }},
+                lon: {{ daycare.lon }},
+                name: "{{ daycare.name | e }}",
+                address: "{{ daycare.address | e }}",
+                postalCode: "{{ daycare.postal_code | e }}",
+                phone: "{{ daycare.phone | e }}",
+                distance: {{ daycare.distance_km }},
+                totalSpaces: {{ daycare.total_spaces }},
+                infantSpaces: {{ daycare.infant_spaces }},
+                toddlerSpaces: {{ daycare.toddler_spaces }},
+                preschoolSpaces: {{ daycare.preschool_spaces }},
+                kindergartenSpaces: {{ daycare.kindergarten_spaces }},
+                schoolageSpaces: {{ daycare.schoolage_spaces }},
+                subsidy: {{ 'true' if daycare.subsidy else 'false' }},
+                cwelcc: {{ 'true' if daycare.cwelcc else 'false' }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        daycares.forEach(function(d) {
+            var badges = '';
+            if (d.subsidy) badges += '<span style="background:#c6f6d5;color:#276749;padding:2px 6px;border-radius:3px;font-size:11px;margin-right:4px;">Subsidy</span>';
+            if (d.cwelcc) badges += '<span style="background:#bee3f8;color:#2b6cb0;padding:2px 6px;border-radius:3px;font-size:11px;">CWELCC</span>';
+
+            var popupContent =
+                '<div style="min-width:200px;">' +
+                '<strong style="font-size:14px;">' + d.name + '</strong><br>' +
+                '<span style="color:#666;">' + d.address + ', ' + d.postalCode + '</span><br>' +
+                '<span style="color:#666;">Phone: ' + d.phone + '</span><br>' +
+                '<span style="color:#38a169;font-weight:600;">' + d.distance + ' km away</span><br><br>' +
+                '<strong>Spaces by Age:</strong><br>' +
+                '<table style="width:100%;font-size:12px;margin-top:4px;">' +
+                '<tr><td>Infant (0-18m)</td><td style="text-align:right;font-weight:600;">' + d.infantSpaces + '</td></tr>' +
+                '<tr><td>Toddler (18-30m)</td><td style="text-align:right;font-weight:600;">' + d.toddlerSpaces + '</td></tr>' +
+                '<tr><td>Preschool (30m-4y)</td><td style="text-align:right;font-weight:600;">' + d.preschoolSpaces + '</td></tr>' +
+                '</table><br>' +
+                badges +
+                '</div>';
+
+            L.marker([d.lat, d.lon], {icon: babyIcon})
+                .addTo(map)
+                .bindPopup(popupContent);
+        });
+    </script>
+    {% else %}
+    <div class="no-results">
+        <p>No daycares found within {{ radius_km }}km with available spaces for this age group.</p>
+        <p>Try expanding your search area or checking nearby neighborhoods.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
