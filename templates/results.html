@@ -190,7 +190,9 @@
                 kindergartenSpaces: {{ daycare.kindergarten_spaces }},
                 schoolageSpaces: {{ daycare.schoolage_spaces }},
                 subsidy: {{ 'true' if daycare.subsidy else 'false' }},
-                cwelcc: {{ 'true' if daycare.cwelcc else 'false' }}
+                cwelcc: {{ 'true' if daycare.cwelcc else 'false' }},
+                ageGroupLabel: "{{ daycare.age_group_label | e }}",
+                ageGroupSpaces: {{ daycare.capacity }}
             }{% if not loop.last %},{% endif %}
             {% endfor %}
         ];
@@ -207,7 +209,8 @@
                 '<div style="min-width:200px;font-family:-apple-system,sans-serif;">' +
                 '<strong style="font-size:14px;color:#37352f;">' + d.name + '</strong><br>' +
                 '<span style="color:#6b6b6b;font-size:13px;">' + d.address + '</span><br>' +
-                '<span style="color:#0f7b6c;font-weight:600;font-size:13px;">' + d.distance + ' km away</span><br><br>' +
+                '<span style="color:#0f7b6c;font-weight:600;font-size:13px;">' + d.distance + ' km away</span><br>' +
+                '<span style="color:#37352f;font-size:13px;">' + d.ageGroupSpaces + ' ' + d.ageGroupLabel + ' spots</span><br><br>' +
                 badges +
                 '</div>';
 
