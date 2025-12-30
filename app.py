@@ -3,7 +3,8 @@ import os
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from flask import Flask, render_template, request
+import re
+from flask import Flask, render_template, request, jsonify
 import pandas as pd
 from dotenv import load_dotenv
 
@@ -11,6 +12,7 @@ from utils.geocoding import geocode_address
 from utils.distance import haversine_distance
 from utils.age_mapper import get_age_group, calculate_age_in_months
 from utils.travel_time import get_all_travel_times
+from utils.email import send_shortlist_email
 
 load_dotenv()
 
@@ -92,6 +94,7 @@ def find_nearby_daycares(
 
         results.append(
             {
+                "loc_id": int(row["LOC_ID"]),
                 "name": row["LOC_NAME"],
                 "address": row["ADDRESS"],
                 "postal_code": row["PCODE"],
@@ -273,6 +276,39 @@ def index():
         )
 
     return render_template("index.html")
+
+
+@app.route("/api/send-shortlist", methods=["POST"])
+def send_shortlist():
+    """API endpoint to email the user's shortlist."""
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"success": False, "error": "No data provided"}), 400
+
+    email = data.get("email", "").strip()
+    daycares = data.get("daycares", [])
+    search_address = data.get("searchAddress", "your location")
+
+    # Validate email
+    if not email:
+        return jsonify({"success": False, "error": "Email is required"}), 400
+
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, email):
+        return jsonify({"success": False, "error": "Invalid email format"}), 400
+
+    # Validate daycares list
+    if not daycares or len(daycares) == 0:
+        return jsonify({"success": False, "error": "No daycares in shortlist"}), 400
+
+    # Send email
+    success = send_shortlist_email(email, daycares, search_address)
+
+    if success:
+        return jsonify({"success": True, "message": "Email sent successfully"})
+    else:
+        return jsonify({"success": False, "error": "Failed to send email. Please try again."}), 500
 
 
 if __name__ == "__main__":

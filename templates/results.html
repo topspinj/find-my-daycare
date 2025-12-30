@@ -29,6 +29,11 @@
                     <span class="count">{{ stats.cwelcc_count }}</span>
                     <span>CWELCC</span>
                 </button>
+                <button class="filter-pill shortlist-btn" id="open-shortlist" type="button">
+                    <i class="fa-solid fa-heart"></i>
+                    <span id="shortlist-count">0</span>
+                    <span>saved</span>
+                </button>
             </div>
             {% endif %}
         </div>
@@ -41,17 +46,23 @@
                 <div class="daycare-grid">
                     {% for daycare in results %}
                     <article class="profile-card"
+                             data-loc-id="{{ daycare.loc_id }}"
                              data-lat="{{ daycare.lat }}"
                              data-lon="{{ daycare.lon }}"
                              data-cwelcc="{{ 'true' if daycare.cwelcc else 'false' }}"
                              data-walktime="{{ daycare.walk_time }}">
 
                         <div class="card-header">
-                            <div>
+                            <div class="card-header-left">
                                 <h3 class="card-title">{{ daycare.name }}</h3>
                                 <p class="card-address">{{ daycare.address }}, {{ daycare.postal_code }}</p>
                             </div>
-                            <span class="card-distance">{{ daycare.distance_km }} km</span>
+                            <div class="card-header-right">
+                                <button class="bookmark-btn" type="button" title="Save to shortlist">
+                                    <i class="fa-regular fa-heart"></i>
+                                </button>
+                                <span class="card-distance">{{ daycare.distance_km }} km</span>
+                            </div>
                         </div>
 
                         <div class="travel-chips">
@@ -142,6 +153,26 @@
         </div>
     </div>
 
+    <!-- Shortlist Panel -->
+    <div id="shortlist-overlay" class="shortlist-overlay"></div>
+    <div id="shortlist-panel" class="shortlist-panel">
+        <div class="shortlist-header">
+            <h3>My Shortlist</h3>
+            <button id="close-shortlist-btn" class="close-btn" type="button">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        <div id="shortlist-items" class="shortlist-items"></div>
+        <div class="shortlist-footer">
+            <div class="email-form">
+                <input type="email" id="shortlist-email" placeholder="Enter your email" />
+                <button id="send-shortlist-btn" class="send-btn" type="button">Send to my email</button>
+            </div>
+            <div id="email-status" class="email-status"></div>
+            <button id="clear-shortlist-btn" class="clear-btn" type="button">Clear all</button>
+        </div>
+    </div>
+
     <script>
         var map = L.map('map').setView([{{ user_lat }}, {{ user_lon }}], 14);
 
@@ -199,17 +230,21 @@
         };
         legend.addTo(map);
 
+        // Search address for shortlist
+        var searchAddress = "{{ address | e }}";
+
         // Daycare data
         var daycares = [
             {% for daycare in results %}
             {
+                locId: {{ daycare.loc_id }},
                 lat: {{ daycare.lat }},
                 lon: {{ daycare.lon }},
                 name: "{{ daycare.name | e }}",
                 address: "{{ daycare.address | e }}",
                 postalCode: "{{ daycare.postal_code | e }}",
                 phone: "{{ daycare.phone | e }}",
-                distance: {{ daycare.distance_km }},
+                distanceKm: {{ daycare.distance_km }},
                 totalSpaces: {{ daycare.total_spaces }},
                 infantSpaces: {{ daycare.infant_spaces }},
                 toddlerSpaces: {{ daycare.toddler_spaces }},
@@ -253,7 +288,7 @@
                 '<div style="min-width:200px;font-family:-apple-system,sans-serif;">' +
                 '<strong style="font-size:14px;color:#37352f;">' + d.name + '</strong><br>' +
                 '<span style="color:#6b6b6b;font-size:13px;">' + d.address + '</span><br>' +
-                '<span style="color:#0f7b6c;font-weight:600;font-size:13px;">' + d.distance + ' km away</span><br>' +
+                '<span style="color:#0f7b6c;font-weight:600;font-size:13px;">' + d.distanceKm + ' km away</span><br>' +
                 '<span style="color:#37352f;font-size:13px;">' + d.ageGroupSpaces + ' ' + d.ageGroupLabel + ' spots</span><br>' +
                 ratingHtml +
                 websiteHtml +
@@ -342,6 +377,184 @@
             this.classList.toggle('active', filterCwelccActive);
             applyFilters();
         });
+
+        // ===== SHORTLIST FUNCTIONALITY =====
+        var STORAGE_KEY = 'findMyDaycare_shortlist';
+        var shortlist = [];
+        var shortlistCountEl = document.getElementById('shortlist-count');
+        var openShortlistBtn = document.getElementById('open-shortlist');
+
+        function loadShortlist() {
+            try {
+                var stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    var data = JSON.parse(stored);
+                    shortlist = data.daycares || [];
+                }
+            } catch (e) {
+                shortlist = [];
+            }
+            updateShortlistUI();
+        }
+
+        function saveShortlist() {
+            var data = {
+                daycares: shortlist,
+                searchAddress: searchAddress,
+                savedAt: new Date().toISOString()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            updateShortlistUI();
+        }
+
+        function updateShortlistUI() {
+            shortlistCountEl.textContent = shortlist.length;
+            openShortlistBtn.classList.toggle('has-items', shortlist.length > 0);
+
+            // Update all bookmark buttons
+            document.querySelectorAll('.bookmark-btn').forEach(function(btn, index) {
+                var locId = daycares[index].locId;
+                var isInList = shortlist.some(function(d) { return d.locId === locId; });
+                var icon = btn.querySelector('i');
+                if (isInList) {
+                    icon.classList.remove('fa-regular');
+                    icon.classList.add('fa-solid');
+                    btn.classList.add('active');
+                } else {
+                    icon.classList.remove('fa-solid');
+                    icon.classList.add('fa-regular');
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function toggleShortlist(daycare) {
+            var index = shortlist.findIndex(function(d) { return d.locId === daycare.locId; });
+            if (index >= 0) {
+                shortlist.splice(index, 1);
+            } else {
+                shortlist.push(daycare);
+            }
+            saveShortlist();
+        }
+
+        // Attach click handlers to bookmark buttons
+        document.querySelectorAll('.bookmark-btn').forEach(function(btn, index) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleShortlist(daycares[index]);
+            });
+        });
+
+        // Shortlist panel
+        var shortlistPanel = document.getElementById('shortlist-panel');
+        var shortlistOverlay = document.getElementById('shortlist-overlay');
+        var shortlistItems = document.getElementById('shortlist-items');
+        var emailInput = document.getElementById('shortlist-email');
+        var sendBtn = document.getElementById('send-shortlist-btn');
+        var clearBtn = document.getElementById('clear-shortlist-btn');
+        var closeBtn = document.getElementById('close-shortlist-btn');
+        var emailStatus = document.getElementById('email-status');
+
+        function openShortlistPanel() {
+            renderShortlistItems();
+            shortlistPanel.classList.add('open');
+            shortlistOverlay.classList.add('open');
+        }
+
+        function closeShortlistPanel() {
+            shortlistPanel.classList.remove('open');
+            shortlistOverlay.classList.remove('open');
+        }
+
+        function renderShortlistItems() {
+            if (shortlist.length === 0) {
+                shortlistItems.innerHTML = '<p class="empty-message">No daycares saved yet. Click the heart icon on a daycare to add it to your list.</p>';
+                sendBtn.disabled = true;
+                return;
+            }
+            sendBtn.disabled = false;
+            var html = '';
+            shortlist.forEach(function(d) {
+                html += '<div class="shortlist-item">' +
+                    '<div class="shortlist-item-info">' +
+                    '<strong>' + d.name + '</strong>' +
+                    '<span>' + d.address + '</span>' +
+                    '</div>' +
+                    '<button class="remove-btn" data-loc-id="' + d.locId + '" title="Remove">' +
+                    '<i class="fa-solid fa-times"></i>' +
+                    '</button>' +
+                    '</div>';
+            });
+            shortlistItems.innerHTML = html;
+
+            // Attach remove handlers
+            shortlistItems.querySelectorAll('.remove-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var locId = parseInt(btn.dataset.locId);
+                    shortlist = shortlist.filter(function(d) { return d.locId !== locId; });
+                    saveShortlist();
+                    renderShortlistItems();
+                });
+            });
+        }
+
+        openShortlistBtn.addEventListener('click', openShortlistPanel);
+        closeBtn.addEventListener('click', closeShortlistPanel);
+        shortlistOverlay.addEventListener('click', closeShortlistPanel);
+
+        clearBtn.addEventListener('click', function() {
+            if (confirm('Clear all saved daycares?')) {
+                shortlist = [];
+                saveShortlist();
+                renderShortlistItems();
+            }
+        });
+
+        sendBtn.addEventListener('click', function() {
+            var email = emailInput.value.trim();
+            if (!email) {
+                emailStatus.textContent = 'Please enter your email';
+                emailStatus.className = 'email-status error';
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+            emailStatus.textContent = '';
+
+            fetch('/api/send-shortlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: email,
+                    daycares: shortlist,
+                    searchAddress: searchAddress
+                })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    emailStatus.textContent = 'Email sent! Check your inbox.';
+                    emailStatus.className = 'email-status success';
+                    emailInput.value = '';
+                } else {
+                    emailStatus.textContent = data.error || 'Failed to send email';
+                    emailStatus.className = 'email-status error';
+                }
+            })
+            .catch(function() {
+                emailStatus.textContent = 'Network error. Please try again.';
+                emailStatus.className = 'email-status error';
+            })
+            .finally(function() {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send to my email';
+            });
+        });
+
+        // Load shortlist on page load
+        loadShortlist();
     </script>
     {% else %}
     <div class="results-main">
